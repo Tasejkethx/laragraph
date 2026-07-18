@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Laragraph\Rules;
 
 use Laragraph\Collectors\CallEdgeCollector;
+use Laragraph\Collectors\NewEdgeCollector;
+use Laragraph\Collectors\StaticCallEdgeCollector;
 use Laragraph\Storage\GraphWriter;
 use Laragraph\Storage\SchemaManager;
 use Laragraph\Support\Edge;
@@ -53,11 +55,19 @@ final class GraphSinkRule implements Rule
      */
     private function edges(CollectedDataNode $node): iterable
     {
-        foreach ($node->get(CallEdgeCollector::class) as $perFileReturns) {
-            foreach ($perFileReturns as $perCallSite) {
-                foreach ($perCallSite as $row) {
-                    [$fromClass, $fromMethod, $toClass, $toMethod, $line, $kind] = $row;
-                    yield new Edge($fromClass, $fromMethod, $toClass, $toMethod, $line, $kind, 'phpstan');
+        $collectors = [
+            CallEdgeCollector::class,
+            StaticCallEdgeCollector::class,
+            NewEdgeCollector::class,
+        ];
+
+        foreach ($collectors as $collector) {
+            foreach ($node->get($collector) as $perFileReturns) {
+                foreach ($perFileReturns as $perCallSite) {
+                    foreach ($perCallSite as $row) {
+                        [$fromClass, $fromMethod, $toClass, $toMethod, $line, $kind] = $row;
+                        yield new Edge($fromClass, $fromMethod, $toClass, $toMethod, $line, $kind, 'phpstan');
+                    }
                 }
             }
         }

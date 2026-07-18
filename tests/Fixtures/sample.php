@@ -10,6 +10,11 @@ class Repo
     {
         return (string) $id;
     }
+
+    public static function describe(): string
+    {
+        return 'repo';
+    }
 }
 
 class Service
@@ -20,7 +25,10 @@ class Service
 
     public function run(): string
     {
-        // Expected edge: Service::run --call--> Repo::find
-        return $this->repo->find(1);
+        $fresh = new Repo();                    // new    → Repo::__construct
+
+        return $this->repo->find(1)             // call   → Repo::find
+            .$fresh->find(2)
+            .Repo::describe();                  // static → Repo::describe
     }
 }

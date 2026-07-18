@@ -14,6 +14,16 @@ services:
 			- phpstan.collector
 
 	-
+		class: Laragraph\Collectors\StaticCallEdgeCollector
+		tags:
+			- phpstan.collector
+
+	-
+		class: Laragraph\Collectors\NewEdgeCollector
+		tags:
+			- phpstan.collector
+
+	-
 		class: Laragraph\Rules\GraphSinkRule
 		arguments:
 			outputPath: %laragraph.output%
