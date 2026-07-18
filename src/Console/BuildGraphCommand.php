@@ -28,6 +28,13 @@ final class BuildGraphCommand extends Command
         $output = (string) ($this->option('output') ?: config('laragraph.output'));
         $paths = $this->option('path') ?: config('laragraph.analyse_paths', ['app']);
         $paths = array_map(fn ($p) => base_path((string) $p), (array) $paths);
+        $paths = array_values(array_filter($paths, 'is_dir'));
+
+        if ($paths === []) {
+            $this->error('None of the configured analyse paths exist.');
+
+            return self::FAILURE;
+        }
 
         $phpstan = base_path('vendor/bin/phpstan');
         if (! is_file($phpstan)) {

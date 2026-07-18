@@ -8,8 +8,11 @@ return [
 
     /*
      | Paths (relative to the app root) PHPStan analyses to build the static graph.
+     | Beyond app/, one-time operations, seeders/factories and route files also
+     | call into services — leaving them out leaves holes in the blast-radius.
+     | Missing directories are skipped, so this default is safe everywhere.
      */
-    'analyse_paths' => ['app'],
+    'analyse_paths' => ['app', 'database', 'routes', 'operations'],
 
     /*
      | PHPStan level for the graph run. Type resolution (facades, Eloquent) works

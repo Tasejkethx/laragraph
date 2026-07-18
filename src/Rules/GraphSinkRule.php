@@ -6,6 +6,7 @@ namespace Laragraph\Rules;
 
 use Laragraph\Collectors\CallEdgeCollector;
 use Laragraph\Collectors\DispatchFuncCollector;
+use Laragraph\Collectors\DispatchStaticCollector;
 use Laragraph\Collectors\NewEdgeCollector;
 use Laragraph\Collectors\StaticCallEdgeCollector;
 use Laragraph\Storage\GraphWriter;
@@ -61,6 +62,7 @@ final class GraphSinkRule implements Rule
             StaticCallEdgeCollector::class,
             NewEdgeCollector::class,
             DispatchFuncCollector::class,
+            DispatchStaticCollector::class,
         ];
 
         foreach ($collectors as $collector) {

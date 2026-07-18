@@ -42,7 +42,8 @@ it('builds a type-resolved static edge from the fixture via phpstan', function (
         ->toContain($run.'find')                             // MethodCall (type-resolved receiver)
         ->toContain($run.'describe')                         // StaticCall
         ->toContain($run.'__construct')                      // New_
-        ->toContain($ns.'Service::run -> '.$ns.'Job::handle') // dispatch()
+        ->toContain($ns.'Service::run -> '.$ns.'Job::handle')       // dispatch(new Job) helper
+        ->toContain($ns.'Service::run -> '.$ns.'QueuedJob::handle') // QueuedJob::dispatch() static
         ->toContain('{function}::'.$ns.'helper_run -> '.$ns.'Repo::find'); // call from a global function
 
     @unlink($db);

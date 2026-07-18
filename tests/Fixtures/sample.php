@@ -24,6 +24,13 @@ class Job
     }
 }
 
+class QueuedJob
+{
+    public function handle(): void
+    {
+    }
+}
+
 class Service
 {
     public function __construct(private Repo $repo)
@@ -33,7 +40,8 @@ class Service
     public function run(): string
     {
         $fresh = new Repo();                    // new      → Repo::__construct
-        dispatch(new Job());                    // dispatch → Job::handle
+        dispatch(new Job());                    // dispatch → Job::handle   (helper form)
+        QueuedJob::dispatch();                  // dispatch → QueuedJob::handle (static form)
 
         return $this->repo->find(1)             // call     → Repo::find
             .$fresh->find(2)
