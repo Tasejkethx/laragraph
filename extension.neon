@@ -1,0 +1,21 @@
+parametersSchema:
+	laragraph: structure([
+		output: schema(string())
+	])
+
+parameters:
+	laragraph:
+		output: %currentWorkingDirectory%/laragraph.sqlite
+
+services:
+	-
+		class: Laragraph\Collectors\CallEdgeCollector
+		tags:
+			- phpstan.collector
+
+	-
+		class: Laragraph\Rules\GraphSinkRule
+		arguments:
+			outputPath: %laragraph.output%
+		tags:
+			- phpstan.rules.rule

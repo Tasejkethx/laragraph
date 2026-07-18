@@ -1,0 +1,50 @@
+{
+    "name": "laragraph/laragraph",
+    "description": "Type-resolved Laravel call-graph on top of PHPStan/Larastan — impact maps that see Laravel's dynamic wiring (routes, events, observers, jobs, schedule).",
+    "keywords": ["laravel", "phpstan", "static-analysis", "call-graph", "impact-analysis"],
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "phpstan/phpstan": "^1.12",
+        "illuminate/console": "^9.0 || ^10.0 || ^11.0",
+        "illuminate/support": "^9.0 || ^10.0 || ^11.0",
+        "symfony/process": "^6.0 || ^7.0"
+    },
+    "require-dev": {
+        "nunomaduro/larastan": "^2.0",
+        "orchestra/testbench": "^7.0",
+        "pestphp/pest": "^1.22"
+    },
+    "autoload": {
+        "psr-4": {
+            "Laragraph\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Laragraph\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Laragraph\\LaragraphServiceProvider"
+            ]
+        },
+        "phpstan": {
+            "includes": [
+                "extension.neon"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

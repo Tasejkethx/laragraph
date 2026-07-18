@@ -1,0 +1,9 @@
+includes:
+	- ../extension.neon
+
+parameters:
+	laragraph:
+		output: /tmp/laragraph-fixture.sqlite
+	level: 6
+	paths:
+		- Fixtures
