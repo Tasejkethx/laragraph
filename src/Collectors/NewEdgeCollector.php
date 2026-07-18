@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Laragraph\Collectors;
 
+use Laragraph\Collectors\Concerns\ResolvesCaller;
 use Laragraph\Collectors\Concerns\ResolvesClasses;
 use PhpParser\Node;
 use PhpParser\Node\Expr\New_;
@@ -18,6 +19,7 @@ use PHPStan\Collectors\Collector;
  */
 final class NewEdgeCollector implements Collector
 {
+    use ResolvesCaller;
     use ResolvesClasses;
 
     public function getNodeType(): string
@@ -30,12 +32,11 @@ final class NewEdgeCollector implements Collector
      */
     public function processNode(Node $node, Scope $scope): ?array
     {
-        if (! $scope->isInClass()) {
+        $caller = $this->callerContext($scope);
+        if ($caller === null) {
             return null;
         }
-
-        $fromClass = $scope->getClassReflection()->getName();
-        $fromMethod = $scope->getFunctionName() ?? '{main}';
+        [$fromClass, $fromMethod] = $caller;
 
         $classNames = $this->resolveClasses($node->class, $scope);
         if ($classNames === []) {

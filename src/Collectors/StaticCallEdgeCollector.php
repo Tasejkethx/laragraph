@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Laragraph\Collectors;
 
+use Laragraph\Collectors\Concerns\ResolvesCaller;
 use Laragraph\Collectors\Concerns\ResolvesClasses;
 use PhpParser\Node;
 use PhpParser\Node\Expr\StaticCall;
@@ -19,6 +20,7 @@ use PHPStan\Collectors\Collector;
  */
 final class StaticCallEdgeCollector implements Collector
 {
+    use ResolvesCaller;
     use ResolvesClasses;
 
     public function getNodeType(): string
@@ -31,15 +33,15 @@ final class StaticCallEdgeCollector implements Collector
      */
     public function processNode(Node $node, Scope $scope): ?array
     {
-        if (! $scope->isInClass()) {
-            return null;
-        }
         if (! $node->name instanceof Node\Identifier) {
             return null;
         }
 
-        $fromClass = $scope->getClassReflection()->getName();
-        $fromMethod = $scope->getFunctionName() ?? '{main}';
+        $caller = $this->callerContext($scope);
+        if ($caller === null) {
+            return null;
+        }
+        [$fromClass, $fromMethod] = $caller;
         $toMethod = $node->name->toString();
 
         $classNames = $this->resolveClasses($node->class, $scope);

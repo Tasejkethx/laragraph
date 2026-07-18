@@ -17,6 +17,13 @@ class Repo
     }
 }
 
+class Job
+{
+    public function handle(): void
+    {
+    }
+}
+
 class Service
 {
     public function __construct(private Repo $repo)
@@ -25,10 +32,16 @@ class Service
 
     public function run(): string
     {
-        $fresh = new Repo();                    // new    → Repo::__construct
+        $fresh = new Repo();                    // new      → Repo::__construct
+        dispatch(new Job());                    // dispatch → Job::handle
 
-        return $this->repo->find(1)             // call   → Repo::find
+        return $this->repo->find(1)             // call     → Repo::find
             .$fresh->find(2)
-            .Repo::describe();                  // static → Repo::describe
+            .Repo::describe();                  // static   → Repo::describe
     }
+}
+
+function helper_run(Repo $repo): string
+{
+    return $repo->find(5);                      // {function}::helper_run → Repo::find
 }

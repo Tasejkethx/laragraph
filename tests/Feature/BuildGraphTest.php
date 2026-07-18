@@ -35,12 +35,15 @@ it('builds a type-resolved static edge from the fixture via phpstan', function (
     )->fetchAll(PDO::FETCH_ASSOC);
 
     $pairs = array_map(fn ($r) => $r['f'].' -> '.$r['t'], $rows);
-    $run = 'Laragraph\Tests\Fixtures\Service::run -> Laragraph\Tests\Fixtures\Repo::';
+    $ns = 'Laragraph\Tests\Fixtures\\';
+    $run = $ns.'Service::run -> '.$ns.'Repo::';
 
     expect($pairs)
-        ->toContain($run.'find')          // MethodCall (type-resolved receiver)
-        ->toContain($run.'describe')      // StaticCall
-        ->toContain($run.'__construct');  // New_
+        ->toContain($run.'find')                             // MethodCall (type-resolved receiver)
+        ->toContain($run.'describe')                         // StaticCall
+        ->toContain($run.'__construct')                      // New_
+        ->toContain($ns.'Service::run -> '.$ns.'Job::handle') // dispatch()
+        ->toContain('{function}::'.$ns.'helper_run -> '.$ns.'Repo::find'); // call from a global function
 
     @unlink($db);
     @unlink($neonPath);

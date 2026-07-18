@@ -24,6 +24,11 @@ services:
 			- phpstan.collector
 
 	-
+		class: Laragraph\Collectors\DispatchFuncCollector
+		tags:
+			- phpstan.collector
+
+	-
 		class: Laragraph\Rules\GraphSinkRule
 		arguments:
 			outputPath: %laragraph.output%

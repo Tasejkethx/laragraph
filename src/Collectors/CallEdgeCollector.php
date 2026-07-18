@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Laragraph\Collectors;
 
+use Laragraph\Collectors\Concerns\ResolvesCaller;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PHPStan\Analyser\Scope;
@@ -26,6 +27,8 @@ use PHPStan\Type\UnionType;
  */
 final class CallEdgeCollector implements Collector
 {
+    use ResolvesCaller;
+
     private const ELOQUENT_BUILDER = 'Illuminate\Database\Eloquent\Builder';
     private const ELOQUENT_RELATION = 'Illuminate\Database\Eloquent\Relations\\';
 
@@ -43,15 +46,15 @@ final class CallEdgeCollector implements Collector
      */
     public function processNode(Node $node, Scope $scope): ?array
     {
-        if (! $scope->isInClass()) {
-            return null;
-        }
         if (! $node->name instanceof Node\Identifier) {
             return null; // $obj->$dynamic() — out of scope for the static graph
         }
 
-        $fromClass = $scope->getClassReflection()->getName();
-        $fromMethod = $scope->getFunctionName() ?? '{main}';
+        $caller = $this->callerContext($scope);
+        if ($caller === null) {
+            return null;
+        }
+        [$fromClass, $fromMethod] = $caller;
         $toMethod = $node->name->toString();
 
         $receiver = $scope->getType($node->var);
