@@ -19,9 +19,9 @@ use PHPStan\Type\UnionType;
  * PHPStan's type engine — this is where Larastan's magic (facades, Eloquent
  * builder, generics) turns `$this->repo->find()` into a concrete class name.
  *
- * Eloquent scopes get special treatment: a call on `Builder<PaymentRequest>`
- * whose method matches a `scopeX` on the model is retargeted from the generic
- * `Builder::x` to `PaymentRequest::scopeX`, so impact points at the real code.
+ * Eloquent scopes get special treatment: a call on `Builder<Post>` whose method
+ * matches a `scopeX` on the model is retargeted from the generic `Builder::x`
+ * to `Post::scopeX`, so impact points at the real code.
  *
  * @implements Collector<MethodCall, list<array{string, string, string, string, int, string}>>
  */

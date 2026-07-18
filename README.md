@@ -18,7 +18,7 @@ blast-radius), primarily as context for an LLM coding agent.
 
 ## Status
 
-Working MVP. On a real ~2900-file app: ~15k nodes / ~37k edges, ~9 min, ~0.6 GB.
+Working MVP. Scales to multi-thousand-file applications (a full build takes minutes).
 
 | Phase | | |
 |---|---|---|
@@ -55,9 +55,9 @@ syntax-based tool are explicitly accounted for. `edges.kind` is one of
 ## Query the graph (agent-facing)
 
 ```bash
-php artisan graph:callers 'PaymentRequestStatusService::changeStatus'
-php artisan graph:callees 'PaymentRequestStatusService::changeStatus'
-php artisan graph:impact  'PaymentRequestStatusService::changeStatus' --depth=4
+php artisan graph:callers 'App\Services\OrderService::place'
+php artisan graph:callees 'App\Services\OrderService::place'
+php artisan graph:impact  'App\Services\OrderService::place' --depth=4
 ```
 
 Target accepts a full FQN, `Class::method`, or a short `Class::method` suffix.
