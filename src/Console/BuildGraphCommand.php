@@ -110,6 +110,11 @@ final class BuildGraphCommand extends Command
 
         $neon .= "parameters:\n";
         $neon .= "\tlevel: {$level}\n";
+        // Dedicated PHPStan result-cache dir. The graph run carries extra
+        // collectors/rules the project's own phpstan does not — sharing the
+        // default tmpDir would make each run invalidate the other's cache.
+        // Isolating it keeps re-builds incremental across graph:build runs.
+        $neon .= "\ttmpDir: '".sys_get_temp_dir()."/laragraph-phpstan'\n";
         $neon .= "\tlaragraph:\n\t\toutput: '{$output}'\n";
         $neon .= "\tpaths:\n";
         foreach ($paths as $path) {
