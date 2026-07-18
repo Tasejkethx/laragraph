@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Laragraph\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
+use Illuminate\Routing\Router;
+use Laragraph\Runtime\LaravelRuntimeExtractor;
+use Laragraph\Storage\GraphWriter;
+use Laragraph\Storage\SchemaManager;
 use PDO;
 use Symfony\Component\Process\Process;
 
@@ -12,7 +17,9 @@ final class BuildGraphCommand extends Command
 {
     protected $signature = 'graph:build
         {--output= : SQLite graph path (default: config laragraph.output)}
-        {--path=* : Paths to analyse, relative to app root (default: config laragraph.analyse_paths)}';
+        {--path=* : Paths to analyse, relative to app root (default: config laragraph.analyse_paths)}
+        {--level= : PHPStan level for the run (default: config laragraph.level)}
+        {--no-runtime : Skip the live-container pass (routes/events/observers)}';
 
     protected $description = 'Build a type-resolved Laravel call-graph via PHPStan';
 
@@ -33,11 +40,11 @@ final class BuildGraphCommand extends Command
 
         $this->info('Analysing: '.implode(', ', $paths));
         $process = new Process(
-            [$phpstan, 'analyse', '-c', $configPath, '--no-progress', '--error-format=json'],
+            [$phpstan, 'analyse', '-c', $configPath, '--no-progress', '--error-format=json', '--memory-limit=2G'],
             base_path(),
             null,
             null,
-            600.0
+            1800.0
         );
         $process->run();
 
@@ -51,9 +58,32 @@ final class BuildGraphCommand extends Command
             return self::FAILURE;
         }
 
+        if (! $this->option('no-runtime')) {
+            $this->appendRuntimeEdges($output);
+        }
+
         $this->report($output);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Second pass: edges Laravel only knows at runtime (routes/events/observers).
+     * Appended to the static graph the PHPStan sink already wrote.
+     */
+    private function appendRuntimeEdges(string $output): void
+    {
+        $pdo = new PDO('sqlite:'.$output);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        (new SchemaManager($pdo))->migrate();
+
+        $extractor = new LaravelRuntimeExtractor(
+            $this->laravel->make(Router::class),
+            $this->laravel->make(EventDispatcher::class),
+        );
+
+        $written = (new GraphWriter($pdo))->write($extractor->edges());
+        $this->line("  runtime edges: +{$written}");
     }
 
     /**
@@ -61,28 +91,49 @@ final class BuildGraphCommand extends Command
      */
     private function writeRunConfig(string $output, array $paths): string
     {
-        $includes = [dirname(__DIR__, 2).'/extension.neon'];
-
-        $projectConfig = config('laragraph.phpstan_config');
-        if (is_string($projectConfig) && is_file(base_path($projectConfig))) {
-            array_unshift($includes, base_path($projectConfig));
-        }
+        $includes = $this->larastanIncludes();
+        $includes[] = dirname(__DIR__, 2).'/extension.neon';
 
         $neon = "includes:\n";
         foreach ($includes as $include) {
             $neon .= "\t- '{$include}'\n";
         }
+        $level = $this->option('level');
+        $level = $level === null ? (int) config('laragraph.level', 5) : (int) $level;
+
         $neon .= "parameters:\n";
+        $neon .= "\tlevel: {$level}\n";
         $neon .= "\tlaragraph:\n\t\toutput: '{$output}'\n";
         $neon .= "\tpaths:\n";
         foreach ($paths as $path) {
             $neon .= "\t\t- '{$path}'\n";
         }
 
-        $configPath = storage_path('laragraph-run.neon');
+        // Written to the system temp dir, not the app's storage/, so a graph
+        // run leaves no artifact in the target project's working tree.
+        $configPath = sys_get_temp_dir().'/laragraph-run.neon';
         file_put_contents($configPath, $neon);
 
         return $configPath;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function larastanIncludes(): array
+    {
+        $configured = config('laragraph.larastan_includes');
+        if (is_array($configured)) {
+            return array_values(array_filter($configured, 'is_file'));
+        }
+
+        foreach (['vendor/larastan/larastan/extension.neon', 'vendor/nunomaduro/larastan/extension.neon'] as $relative) {
+            if (is_file(base_path($relative))) {
+                return [base_path($relative)];
+            }
+        }
+
+        return [];
     }
 
     private function report(string $output): void
@@ -93,8 +144,15 @@ final class BuildGraphCommand extends Command
         $nodes = (int) $pdo->query('SELECT COUNT(*) FROM nodes')->fetchColumn();
         $edges = (int) $pdo->query('SELECT COUNT(*) FROM edges')->fetchColumn();
 
+        /** @var array<string, int> $byResolver */
+        $byResolver = $pdo->query('SELECT resolved_by, COUNT(*) FROM edges GROUP BY resolved_by')
+            ->fetchAll(PDO::FETCH_KEY_PAIR);
+
         $this->info("Graph built → {$output}");
         $this->line("  nodes: {$nodes}");
         $this->line("  edges: {$edges}");
+        foreach ($byResolver as $resolver => $count) {
+            $this->line("    {$resolver}: {$count}");
+        }
     }
 }

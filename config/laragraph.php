@@ -12,10 +12,17 @@ return [
     'analyse_paths' => ['app'],
 
     /*
-     | Project PHPStan config to reuse, relative to the app root. Reusing the
-     | project's phpstan.neon pulls in Larastan — without it Eloquent/facade
-     | magic stays unresolved and the graph loses its Laravel-aware edges.
-     | null = analyse with a bare PHPStan (weaker type resolution).
+     | PHPStan level for the graph run. Type resolution (facades, Eloquent) works
+     | on every level — higher levels only sharpen generics at the cost of speed.
      */
-    'phpstan_config' => 'phpstan.neon',
+    'level' => 5,
+
+    /*
+     | Larastan extension.neon files to include so Laravel magic (facade → class,
+     | Eloquent builder, generics) resolves — this is what makes the graph
+     | Laravel-aware. null = autodetect larastan/larastan or nunomaduro/larastan
+     | in the app's vendor. We deliberately do NOT reuse the project's whole
+     | phpstan.neon: its paths/baseline/disallowed rules would fight our run.
+     */
+    'larastan_includes' => null,
 ];

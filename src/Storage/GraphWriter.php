@@ -34,8 +34,8 @@ final class GraphWriter
         $this->pdo->beginTransaction();
 
         foreach ($edges as $edge) {
-            $fromId = $this->nodeId($insertNode, $selectNode, $edge->fromFqn());
-            $toId = $this->nodeId($insertNode, $selectNode, $edge->toFqn());
+            $fromId = $this->nodeId($insertNode, $selectNode, $edge->fromFqn(), $edge->fromNodeKind);
+            $toId = $this->nodeId($insertNode, $selectNode, $edge->toFqn(), $edge->toNodeKind);
 
             $insertEdge->execute([
                 'from_id' => $fromId,

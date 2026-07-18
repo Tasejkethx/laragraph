@@ -15,8 +15,10 @@ final class Edge
         public readonly string $toClass,
         public readonly string $toMethod,
         public readonly int $line,
-        public readonly string $kind,       // call | static | new | dispatch | event | route | observe | schedule | bind
-        public readonly string $resolvedBy, // phpstan | runtime
+        public readonly string $kind,          // call | static | new | dispatch | event | route | observe | schedule | bind
+        public readonly string $resolvedBy,    // phpstan | runtime
+        public readonly string $fromNodeKind = 'method', // method | route | event | model-event
+        public readonly string $toNodeKind = 'method',
     ) {
     }
 
