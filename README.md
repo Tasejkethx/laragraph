@@ -7,40 +7,62 @@ laragraph reads the graph off PHPStan's **resolved types**. That means it sees
 edges the others structurally cannot:
 
 - facade → concrete class (`Cache::get()` → the real store)
-- Eloquent magic (`User::query()->whereEmail()` → builder methods)
+- Eloquent magic — `User::query()->whereEmail()` resolves to the builder, and a
+  local scope call (`->byUser()`) is retargeted to `User::scopeByUser`
 - generics on collections
 - and — via a live-container pass — Laravel's dynamic wiring: routes → controllers,
-  events → listeners, `Model::observe()`, `dispatch()`, the scheduler.
+  events → listeners, `Model::observe()`.
 
 The graph is stored in SQLite and queried for **impact maps** (callers / callees /
 blast-radius), primarily as context for an LLM coding agent.
 
 ## Status
 
-Early. Built phase-by-phase:
+Working MVP. On a real ~2900-file app: ~15k nodes / ~37k edges, ~9 min, ~0.6 GB.
 
-- **Ф0 — skeleton** ✅ package, service provider, PHPStan extension, SQLite schema.
-- **Ф1 — static core** 🟡 `CallEdgeCollector` (instance calls, type-resolved) →
-  `GraphSinkRule` → SQLite.
-- **Ф2 — Laravel dynamics** ⬜ routes / events / observers / schedule / dispatch.
-- **Ф3 — agent queries** ⬜ `graph:impact`, `graph:callers`, `graph:callees`.
+| Phase | | |
+|---|---|---|
+| Ф0 skeleton | ✅ | package, provider, PHPStan extension, SQLite schema |
+| Ф1 static core | ✅ | method / static / `new` calls, type-resolved; Eloquent scope→model |
+| Ф2 Laravel dynamics | ✅ | routes, events, observers (live container) |
+| Ф3 agent queries | ✅ | `graph:callers` / `graph:callees` / `graph:impact` |
+
+Backlog: `schedule` edges, facade→concrete-class for static calls, PHPStan 2 support
+(see Compatibility), publishing to a git remote.
 
 ## How it works
 
 ```
 php artisan graph:build
    │
-   ├─ PHPStan analyser (laragraph extension)
-   │     CallEdgeCollector → per-call-site edges (callee resolved via Scope)
+   ├─ PHPStan analyser (laragraph extension) — static, resolved_by=phpstan
+   │     CallEdgeCollector        →  $x->method()      (callee resolved via Scope)
+   │     StaticCallEdgeCollector  →  Foo::bar()
+   │     NewEdgeCollector         →  new Foo()         → Foo::__construct
+   │     DispatchFuncCollector    →  dispatch(new Job) → Job::handle
    │        ↓ CollectedDataNode (one virtual node after full analysis)
    │     GraphSinkRule → writes nodes + edges to SQLite
    │
-   └─ (Ф2) live Laravel container → routes/listeners/observers/schedule edges
+   └─ live Laravel container — dynamic, resolved_by=runtime
+         routes → controller::method,  event → listener,  model → observer
 ```
 
 `edges.resolved_by` records whether an edge came from static analysis (`phpstan`)
-or the live framework (`runtime`) — so the Laravel dynamics that are invisible to
-every syntax-based tool are explicitly accounted for.
+or the live framework (`runtime`) — so the Laravel dynamics invisible to every
+syntax-based tool are explicitly accounted for. `edges.kind` is one of
+`call | static | new | scope | dispatch | route | event | observe`.
+
+## Query the graph (agent-facing)
+
+```bash
+php artisan graph:callers 'PaymentRequestStatusService::changeStatus'
+php artisan graph:callees 'PaymentRequestStatusService::changeStatus'
+php artisan graph:impact  'PaymentRequestStatusService::changeStatus' --depth=4
+```
+
+Target accepts a full FQN, `Class::method`, or a short `Class::method` suffix.
+`--json` for machine output, `--db=` to pick a graph file. `impact` is a reverse
+BFS — "what transitively depends on this".
 
 ## Install (into a Laravel app, local path repo)
 
@@ -52,18 +74,23 @@ every syntax-based tool are explicitly accounted for.
 "require-dev": { "laragraph/laragraph": "*" }
 ```
 
-Point it at the app's PHPStan config to reuse Larastan (config `laragraph.phpstan_config`),
-then:
+Larastan is auto-detected from the app's vendor (config `laragraph.larastan_includes`
+to override) — without it, Eloquent/facade magic stays unresolved. Then:
 
 ```bash
-php artisan graph:build
+php artisan graph:build              # whole app/, level from config
+php artisan graph:build --path=app/Services --level=1 --no-runtime
 ```
+
+## Compatibility
+
+Targets **PHPStan ^1.12** and Laravel 9–11. PHPStan 2 is not yet supported: the
+`Collector` generics and `RuleError` contract changed there and need verification
+before widening the constraint — the graph run is not a `larastan 2` environment.
 
 ## Dev
 
 ```bash
 composer install
-# Ф1 smoke test against the fixture:
-vendor/bin/phpstan analyse -c tests/phpstan-fixture.neon
-sqlite3 /tmp/laragraph-fixture.sqlite 'select * from edges'
+vendor/bin/pest                      # 17 tests: unit + phpstan integration
 ```
