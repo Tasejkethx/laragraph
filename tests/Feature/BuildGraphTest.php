@@ -15,7 +15,7 @@ it('builds a type-resolved static edge from the fixture via phpstan', function (
         ."parameters:\n"
         ."\tlevel: 5\n"
         ."\tlaragraph:\n\t\toutput: '{$db}'\n"
-        ."\tpaths:\n\t\t- '{$root}/tests/Fixtures'\n";
+        ."\tpaths:\n\t\t- '{$root}/tests/Fixtures/sample.php'\n";
     file_put_contents($neonPath, $neon);
 
     $process = new Process(
