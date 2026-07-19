@@ -92,7 +92,7 @@ php artisan graph:build
    │     StaticCallEdgeCollector  →  Foo::bar(), self::, facades, Model::create()
    │     NewEdgeCollector         →  new Foo()           → Foo::__construct
    │     DispatchFuncCollector    →  dispatch(new Job)   → Job::handle
-   │     DispatchStaticCollector  →  SomeJob::dispatch() → Job::handle
+   │     DispatchStaticCollector  →  SomeJob::dispatch() → Job::handle + Job::__construct
    │        ↓ CollectedDataNode (one virtual node after full analysis)
    │     GraphSinkRule → writes nodes + edges to SQLite
    │
