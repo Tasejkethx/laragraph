@@ -13,9 +13,12 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Reflection\ReflectionProvider;
 
 /**
- * Static job dispatch: `SomeJob::dispatch(...)` (the Dispatchable trait) → an
- * edge to `SomeJob::handle`, the execution point. This is the common form in
- * app code; DispatchFuncCollector covers the `dispatch(new Job)` helper.
+ * Static job dispatch: `SomeJob::dispatch(...)` (the Dispatchable trait). Emits
+ * two edges: → `SomeJob::handle` (the execution point) and → `SomeJob::__construct`
+ * — because Dispatchable does `new static(...$args)` internally, so the ctor call
+ * is invisible to NewEdgeCollector. Without the ctor edge, `callers ::__construct`
+ * would miss every dispatch site. DispatchFuncCollector covers `dispatch(new Job)`
+ * (there the `new` is explicit, so NewEdgeCollector already links the ctor).
  *
  * The `handle` check keeps it honest — a `Bus::dispatch()` or any unrelated
  * static `dispatch` on a class without a handler produces no edge.
@@ -61,6 +64,7 @@ final class DispatchStaticCollector implements Collector
         foreach ($this->resolveClasses($node->class, $scope) as $toClass) {
             if ($this->dispatchesToHandle($toClass)) {
                 $edges[] = [$fromClass, $fromMethod, $toClass, 'handle', $line, 'dispatch'];
+                $edges[] = [$fromClass, $fromMethod, $toClass, '__construct', $line, 'dispatch'];
             }
         }
 
